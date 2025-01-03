@@ -47,3 +47,49 @@ mt.
 
 ### 03.2 MLP (Multi Layer NN)
 
+#### Model : 2D spce, 100 hidden neurons
+```
+xampapdatunukureeb
+amp_rahmh
+senamp
+kuran
+pdolurikda_gan_singh
+bair_tumarir
+manf
+akti
+gow
+surrenmp
+```
+#### Model : 2D spce, 300 hidden neurons
+```
+nuvirsha
+prim
+lam
+hehheet
+poon
+pari_sinju
+amrer_sin
+soya_shak
+ran
+tata
+```
+#### Model : 3D spce, 100 hidden neurons
+```
+nidha_dan
+jai
+ran
+sari
+maika_thu
+mayata_annadeep
+pin
+reha
+gukrasharla
+sub
+```
+
+
+Observations :
+* The model is quite better as it generated words like `kuran`, `akti` (from 2D 100) , `tata`, `pari_sinju` (from 2D 300) , and  `jai`, `reha`,`mayata_annadeep`, (from 3D 100), which are impresive 
+* Amazing coindidence to create words like '**kuran**' and '**tata**'( I am proudly from TATA institue :P).
+
+

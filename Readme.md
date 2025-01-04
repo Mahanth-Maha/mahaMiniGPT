@@ -93,3 +93,80 @@ Observations :
 * Amazing coindidence to create words like '**kuran**' and '**tata**'( I am proudly from TATA institue :P).
 
 
+### 03.3 MLP (Multi Layer NN ) with Batch Normalisation and kammin init
+
+#### Model : 10D spce, 2 hidden layers with 100 hidden neurons , context = 3 
+```
+abhaa
+prya
+sonika
+radav
+vipinku
+ari
+chansrat
+shi
+suraju
+deep
+```
+
+* impressive improvements 
+
+#### Model : 10D spce, 2 hidden layers with 100 hidden neurons , context = 4
+```
+kumar
+pandeepak
+salma
+deepak
+dibashida
+kanchika
+sunita
+bharamjeet
+ajay
+deen
+```
+
+* I think its overfitting ? but results are good
+
+#### Model : 10D spce, 3 hidden layers with 100 hidden neurons , context = 4
+```
+pinki
+simran
+sunita
+tosh
+swagtiktru
+varshadiya
+arora
+saima
+ravinashok
+savita
+```
+* randomly generated names looks similar and been overfitting data, but the test loss (1.42) is also comparatively better, so it might not the overfitting case.
+*  if we could remove the word generated is it is already exists in dataset, we get these results :
+```
+gayam
+ravind
+taramnesh
+rajputida
+kuldeepa
+```
+* which also looks same as Indian names, so its working and better now !
+
+## Loss Report
+
+| Model   | Context (#Char) | Train Loss | Test Loss |
+| ---------------- | ----- | --------- | --------- | 
+||||
+| Bigram (Probablistic) Model | 1 | 2.26088 | |
+||||
+| Single Layer NN | 1 | 2.38656 | |
+| MLP-1hLayer-100-2D | 2 | 2.27822 | |
+| MLP-1hLayer-300-2D | 2 | 2.09353 | |
+| MLP-1hLayer-100-3D | 2 | 1.90827 | |
+| MLP-1hLayer-100-10D | 2 | 1.61364 | 1.64191 |
+| MLP-1hLayer-100-10D (+ softmax - init W2 fix) | 2 | 1.60924 | 1.64042 |
+| MLP-1hLayer-100-10D (+ tanh - Kamming W1 fix) | 2 | 1.58817 | 1.62057 |
+||||
+| MLP-1hLayer-100-10D (+ Batch Normalization) | 2 | 1.59163 | 1.60631 |
+| MLP-2hLayer-100-10D (+ Batch Normalization) | 2 | 1.53046 | 1.57615 |
+| MLP-2hLayer-100-10D (+ Batch Normalization) | 3 | 1.39479 | 1.44245 |
+| MLP-3hLayer-100-10D (+ Batch Normalization) | 3 | 1.35602 | 1.42019 |

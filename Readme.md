@@ -166,7 +166,9 @@ kuldeepa
 | MLP-1hLayer-100-10D (+ softmax - init W2 fix) | 2 | 1.60924 | 1.64042 |
 | MLP-1hLayer-100-10D (+ tanh - Kamming W1 fix) | 2 | 1.58817 | 1.62057 |
 ||||
-| MLP-1hLayer-100-10D (+ Batch Normalization) | 2 | 1.59163 | 1.60631 |
-| MLP-2hLayer-100-10D (+ Batch Normalization) | 2 | 1.53046 | 1.57615 |
-| MLP-2hLayer-100-10D (+ Batch Normalization) | 3 | 1.39479 | 1.44245 |
-| MLP-3hLayer-100-10D (+ Batch Normalization) | 3 | 1.35602 | 1.42019 |
+| MLP-1hLayer-100-10D | 2 | 1.59163 | 1.60631 |
+| MLP-2hLayer-100-10D | 2 | 1.53046 | 1.57615 |
+| MLP-2hLayer-100-10D | 3 | 1.39479 | 1.44245 |
+| MLP-3hLayer-100-10D | 3 | 1.35602 | 1.42019 |
+|+ Batch Normalisation|||
+| MLP-2hLayer-100-10D | 2 | 1.53046 | 1.57615 |

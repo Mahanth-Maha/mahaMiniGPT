@@ -6,18 +6,50 @@ import torch.optim as optim
 
 import numpy as np
 from datetime import datetime
-    
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-# device = 'cpu'
 print(f'[>] Device : {device}')
 
-print(f'[>] Loading Data ...')
-data = open('./data/wikitext/processed.txt', 'r').read()
-print(f'[+] Data Loaded !')
+train_model = True 
+train_from_scratch = False
 
-chars = ''.join(sorted(list(set(data))))
-vocab_size = len(chars) 
-print(f'[>] Number of Unique Characters : {vocab_size}')
+alpha = 1e-4
+
+batch_size = 64
+block_size = 16
+max_iters = 100000
+pred_char_len = 1000
+eval_iters = max_iters // 100
+
+models_folder = './saved_models'
+os.makedirs(models_folder, exist_ok=True)
+
+model_file = f'{models_folder}/04_01_bi_gram_Generator_{device}.pth'
+encoding_file = f'{models_folder}/04_01_bi_gram_Generator_{device}_encoding.pth'
+data_file = './data/wikitext/processed.txt'
+chars_file = './data/wikitext/chars.txt'
+
+model_exists = os.path.exists(model_file)
+encoding_exists = os.path.exists(encoding_file)
+data_exists = os.path.exists(data_file)
+chars_exists = os.path.exists(chars_file)
+
+
+if not data_exists:
+    print(f'[!] Data not found !')
+    exit(0)
+
+data = None 
+if not chars_exists:
+    print(f'[!] chars not found !')
+    print(f'[>] Loading Data & Getting chars...')
+    data = open(data_file, 'r').read()
+    chars = ''.join(sorted(list(set(data))))
+    open(chars_file, 'w').write(chars)
+    chars_exists = True
+    print(f'[+] Data Loaded and chars saved !')
+else :
+    chars = open(chars_file, 'r').read()
 
 def enc(x, chars = chars):
     idxs = []
@@ -31,39 +63,36 @@ def dec(x, chars = chars):
         txt += chars[i]
     return txt
 
-# import tiktoken 
-# tik = tiktoken.get_encoding('gpt2')
-# tik.encode('Mahanth Yalla')
-# tik.decode(tik.encode('Mahanth Yalla'))
 
-# ### select encoder
-enc = enc
-dec = dec
-vocab_size = vocab_size
+if encoding_exists:
+    encoded_data = torch.load(encoding_file).clone().detach()
+    encoded_data = encoded_data.to(device)
+    print(f'[+] Encoding Loaded !')
+else:
+    print(f'[>] Loading Data ...')
+    if data is None:
+        data = open(data_file, 'r').read()
+    print(f'[+] Data Loaded !')
+    print(f'[>] Encoding Data ...')
+    st  = datetime.now()
+    encoded_data = torch.tensor(enc(data), dtype=torch.long).to(device)
+    et = datetime.now()
+    print(f'[+] Data Encoded in {et - st} !')
+    torch.save(encoded_data, encoding_file)
+    print(f'[+] Encoding saved !')
 
-# # tiktoken
-# enc = tik.encode
-# dec = tik.decode
-# vocab_size = tik.vocab_size
+vocab_size = len(chars) 
+print(f'[>] Number of Unique Characters : {vocab_size}')
 
-# development purpose, taking first 1M chars only 
-data = data[:1000000]
-
-print(f'[>] Encoding Data ...')
-st  = datetime.now()
-data = torch.tensor(enc(data), dtype=torch.long).to(device)
-n1 = int(0.8 * len(data))
-n2 = int(0.9 * len(data))
-Xtr = data[:n1]
-Xdev = data[n1:n2]
-Xte = data[n2:]
+n1 = int(0.8 * len(encoded_data))
+n2 = int(0.9 * len(encoded_data))
+Xtr = encoded_data[:n1]
+Xdev = encoded_data[n1:n2]
+Xte = encoded_data[n2:]
 
 Xtr.to(device)
 Xdev.to(device)
 Xte.to(device)
-
-et = datetime.now()
-print(f'[+] Data Encoded in {et - st} !')
 
 
 class BiGramLanguageModel(nn.Module):
@@ -102,84 +131,91 @@ def get_batch(split):
     y_batch = torch.stack([X[s+1:s + block_size+1] for s in start]).to(device)
     return X_batch.to(device), y_batch.to(device)
 
+@torch.no_grad()
 def estimate_batch_loss(model):
-    with torch.no_grad():
-        X_batch, y_batch = get_batch('dev')
-        logits, loss = model(X_batch, y_batch)
-        return loss.item()
+    X_batch, y_batch = get_batch('dev')
+    logits, loss = model(X_batch, y_batch)
+    return loss.item()
 
+@torch.no_grad()
+def estimate_loss(model):
+    out = {}
+    model.eval()
+    for split in ['train', 'dev' , 'test']:
+        losses = torch.zeros(eval_iters)
+        for k in range(eval_iters):
+            X, Y = get_batch(split) 
+            logits, loss = model(X, Y)
+            losses[k] = loss.item()
+        out[split] = losses.mean()
+    model.train()
+    return out
 
 model = BiGramLanguageModel(vocab_size)
 model = model.to(device)
-alpha = 1e-4
-
-batch_size = 64
-block_size = 16
-n_iters = 100000
-
-train_model = False
-from_scratch = False
-
-os.makedirs('./saved_models', exist_ok=True)
-model_exists = os.path.exists(f'./saved_models/04_01_bi_gram_Generator_{device}.pth')
 
 if train_model:
-    print(f'[>] Training ...')
-    if not model_exists or from_scratch:
+    print(f'\n[>] Training ...')
+    if not model_exists or train_from_scratch:
         print(f'[!] Training from scratch ...')
     else:
         # Load the model
-        model.load_state_dict(torch.load(f'./saved_models/04_01_bi_gram_Generator_{device}.pth'))
+        model.load_state_dict(torch.load(model_file))
         print('[+] Model loaded!')
 
     st  = datetime.now()
     optimiser = optim.AdamW(model.parameters(), lr=alpha) 
-    for iter in range(n_iters):
+    for iter in range(max_iters):
         x, y = get_batch('train')
         logits, loss = model(x, y)
         loss.backward()
         optimiser.step()
         optimiser.zero_grad(set_to_none=True)
-        if iter % (n_iters // 10) == 0:
-            dev_loss = estimate_batch_loss(model)
-            print(f'Iter : {iter:7d}, Train Loss : {loss.item():.4f}, Valid Loss : {dev_loss:.4f}')
+        if iter % (max_iters // 10) == 0:
+            # trian_loss = loss.item()
+            # dev_loss = estimate_batch_loss(model)
+            train_loss = estimate_loss(model)['train']
+            dev_loss = estimate_loss(model)['dev']
+            print(f'Iter : {iter:7d}, Train Loss : {train_loss:.4f}, Valid Loss : {dev_loss:.4f}')
     et = datetime.now()
     print(f'[+] Training Done in {et - st} !')
 
     # Save the model
-    torch.save(model.state_dict(), f'./saved_models/04_01_bi_gram_Generator_{device}.pth')
+    torch.save(model.state_dict(), model_file)
     print('[+] Model saved!')
 
 else :
     # Load the model
-    model.load_state_dict(torch.load(f'./saved_models/04_01_bi_gram_Generator_{device}.pth'))
+    model.load_state_dict(torch.load(model_file))
     print('[+] Model loaded!')
 
 model.to(device)
 
-X_test, y_test = get_batch('test')
-logits, loss = model(X_test, y_test)
-print(f'[>] Test Loss : {loss.item():.4f}')
+print(f'\n[>] Testing ...')
+out = estimate_loss(model)
+for ty , loss in out.items():
+    print(f'\t{ty:5} Loss : {loss:.4f}')
+print(f'\n')
 
 print(f'[>] Generating ...')
 
 print('-'*100, '\n\tStarting with no context') 
 print('-'*100)
-print(dec(model.generate(torch.zeros((1, 1), dtype=torch.long , device=device), n_pred=500)[0].tolist()))
+print(dec(model.generate(torch.zeros((1, 1), dtype=torch.long , device=device), n_pred=pred_char_len)[0].tolist()))
 print()
 
 print('-'*100, '\n\tStarting with "Marvel "') 
 print('-'*100)
 
 contxt = torch.tensor(enc('Marvel '), dtype=torch.long).unsqueeze(0).to(device)
-print(dec(model.generate(contxt, n_pred=500)[0].tolist()))
+print(dec(model.generate(contxt, n_pred=pred_char_len)[0].tolist()))
 print()
 
 print('-'*100, '\n\tStarting with "Computer "') 
 print('-'*100)
 
 contxt = torch.tensor(enc('Computer '), dtype=torch.long).unsqueeze(0).to(device)
-print(dec(model.generate(contxt, n_pred=500)[0].tolist()))
+print(dec(model.generate(contxt, n_pred=pred_char_len)[0].tolist()))
 print()
 
 print('[+] hehe boi !')

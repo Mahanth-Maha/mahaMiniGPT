@@ -178,3 +178,4 @@ data/*_gpt.txt
 Papers/*
 Papers/
 
+*_encoding.pth

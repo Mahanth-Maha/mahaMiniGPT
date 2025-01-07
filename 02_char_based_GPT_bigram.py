@@ -1,4 +1,3 @@
-from tracemalloc import start
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -116,7 +115,7 @@ if train_model:
     else:
         # Load the model
         m = BiGramLanguageModel(len(coding_str))
-        m.load_state_dict(torch.load('./data/bigram_language_model.pth'))
+        m.load_state_dict(torch.load('./saved_models/bigram_language_model.pth'))
         m.to(device)
         print('[+] Model loaded!')
 
@@ -135,13 +134,13 @@ if train_model:
     print(f'[+] Training Done in {et - st} !')
 
     # Save the model
-    torch.save(m.state_dict(), './data/bigram_language_model.pth')
+    torch.save(m.state_dict(), './saved_models/bigram_language_model.pth')
     print('[+] Model saved!')
 
 else :
     # Load the model
     m = BiGramLanguageModel(len(coding_str))
-    m.load_state_dict(torch.load('./data/bigram_language_model.pth'))
+    m.load_state_dict(torch.load('./saved_models/bigram_language_model.pth'))
     m.to(device)
     print('[+] Model loaded!')
 

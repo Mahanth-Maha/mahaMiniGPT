@@ -24,7 +24,58 @@ Sample output Starting with "Telugu " :
 Telugu . ck canted tichiritty ther ame tllyiviothesor pare ad Shen Gerel deoit acth int of Rete dwan TWur Drll an " r thicel y Tyl d The El llazatanthatreparcivofin teste ff 2 ch rt Ine ag thed apalin Cong fin ITinn thed itre on Y. letstenn byt belisselly lorve . is Yoo d Criom Cot Toudes 's Thealo n . , Mat . 'sacan Richerithe me rgerys 's frereranta stcrionk cey tthomm " whe ty h , asus ma chibcoccure an Ants an bel cte itive ) Unoced ander sthape Wed th pen ope b hbineloiamot Blicejuarowilst Stha to
 ```
 
-## 03 - create new names from existing Indian Names
+## 03 - creating new names from existing Indian Names
+
+## Loss Report
+
+| Model   | Context (#Char) | Train Loss | Test Loss |
+| ---------------- | ----- | --------- | --------- | 
+||||
+| Bigram (Probablistic) Model | 1 | 2.26088 | |
+||||
+| Single Layer NN | 1 | 2.38656 | |
+| MLP-1hLayer-100-2D | 2 | 2.27822 | |
+| MLP-1hLayer-300-2D | 2 | 2.09353 | |
+| MLP-1hLayer-100-3D | 2 | 1.90827 | |
+| MLP-1hLayer-100-10D | 2 | 1.61364 | 1.64191 |
+| MLP-1hLayer-100-10D (+ softmax - init W2 fix) | 2 | 1.60924 | 1.64042 |
+| MLP-1hLayer-100-10D (+ tanh - Kamming W1 fix) | 2 | 1.58817 | 1.62057 |
+||||
+| MLP-1hLayer-100-10D | 2 | 1.59163 | 1.60631 |
+| MLP-2hLayer-100-10D | 2 | 1.53046 | 1.57615 |
+| MLP-2hLayer-100-10D | 3 | 1.39479 | 1.44245 |
+| MLP-3hLayer-100-10D | 3 | 1.35602 | 1.42019 |
+|+ Batch Normalisation|||
+| MLP-2hLayer-100-10D | 2 | 1.60034 | 1.59963 |
+| MLP-2hLayer-100-10D | 8 | 1.35103 | 1.42776 |
+| MLP-3hLayer-100-10D | 8 | 1.32197 | 1.40935 |
+| WaveNet + BN |||
+| WaveNet-3hLayer-64-10D | 8 | 1.34357 | 1.41593 |
+
+### best model output till now
+
+MLP model produced these new indian names which are not in actual dataset
+
+Model :
+* Train Loss : 1.32197 | Test Loss : 1.40935
+* No of Parameters : 31897
+* No of hidden layers : 3
+* No of dimensions used to encode : 10
+* trained for : 100,000 iterations (with batch_size of 32)
+* Output :
+```
+nikkika
+bhatham
+sand
+niik
+amat
+binti
+yogke
+narsijal
+devy
+vens
+```
+
 
 Creating new unknown indian names (may be meaningless) by using indian names dataset
 
@@ -33,16 +84,16 @@ Creating new unknown indian names (may be meaningless) by using indian names dat
 sample output from a bi gram model built using Single layer - Neural Network with SGD (loss is high since it is only considering one previous input to decide on next char)
 
 ```
-deesha.
-sumba.
-dfmj.
-k.
-nginqhxheeeeugn.
-dei.
-rpran.
-ama.
-china.
-mt.
+deesha
+sumba
+dfmj
+k
+nginqhxheeeeugn
+dei
+rpran
+ama
+china
+mt
 ```
 
 ### 03.2 MLP (Multi Layer NN)
@@ -151,24 +202,70 @@ kuldeepa
 ```
 * which also looks same as Indian names, so its working and better now !
 
-## Loss Report
+### MLP with Batch Normalisation
 
-| Model   | Context (#Char) | Train Loss | Test Loss |
-| ---------------- | ----- | --------- | --------- | 
-||||
-| Bigram (Probablistic) Model | 1 | 2.26088 | |
-||||
-| Single Layer NN | 1 | 2.38656 | |
-| MLP-1hLayer-100-2D | 2 | 2.27822 | |
-| MLP-1hLayer-300-2D | 2 | 2.09353 | |
-| MLP-1hLayer-100-3D | 2 | 1.90827 | |
-| MLP-1hLayer-100-10D | 2 | 1.61364 | 1.64191 |
-| MLP-1hLayer-100-10D (+ softmax - init W2 fix) | 2 | 1.60924 | 1.64042 |
-| MLP-1hLayer-100-10D (+ tanh - Kamming W1 fix) | 2 | 1.58817 | 1.62057 |
-||||
-| MLP-1hLayer-100-10D | 2 | 1.59163 | 1.60631 |
-| MLP-2hLayer-100-10D | 2 | 1.53046 | 1.57615 |
-| MLP-2hLayer-100-10D | 3 | 1.39479 | 1.44245 |
-| MLP-3hLayer-100-10D | 3 | 1.35602 | 1.42019 |
-|+ Batch Normalisation|||
-| MLP-2hLayer-100-10D | 2 | 1.53046 | 1.57615 |
+#### Model : 10D spce, 2 hidden layers with 100 hidden neurons , context = 3
+
+```
+anjarayanku
+zad
+sagat
+kumar
+kumari
+kumar
+sundeeparshahampal
+devi
+kumar
+shahul
+```
+
+#### Model : 10D spce, 2 hidden layers with 100 hidden neurons , context = 8
+
+```
+bahata
+deepal
+haishat
+parimat
+halid
+sugayal
+maldis
+gari
+upandeep
+kirtik
+```
+
+#### Model : 10D spce, 3 hidden layers with 100 hidden neurons , context = 8
+
+```
+nikkika
+bhatham
+sand
+niik
+amat
+binti
+yogke
+narsijal
+devy
+vens
+```
+
+### Wave Net Model 
+
+#### : 10D spce, 3 hidden layers with 100 hidden neurons , context = 8
+
+```
+neerka
+mahesad
+hardarn
+veerya
+bhiloe
+bhab
+rekhar
+heman
+rajti
+agad
+```
+
+
+
+

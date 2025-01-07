@@ -111,13 +111,13 @@ def estimate_batch_loss(model):
 
 model = BiGramLanguageModel(vocab_size)
 model = model.to(device)
-alpha = 1e-3
+alpha = 1e-4
 
 batch_size = 64
 block_size = 16
-n_iters = 10000
+n_iters = 100000
 
-train_model = True
+train_model = False
 from_scratch = False
 
 os.makedirs('./saved_models', exist_ok=True)
@@ -163,17 +163,23 @@ print(f'[>] Test Loss : {loss.item():.4f}')
 
 print(f'[>] Generating ...')
 
-print('-'*100, '\nStarting with no context\n', '-'*100)
+print('-'*100, '\n\tStarting with no context') 
+print('-'*100)
 print(dec(model.generate(torch.zeros((1, 1), dtype=torch.long , device=device), n_pred=500)[0].tolist()))
+print()
 
-print('-'*100, '\nStarting with "Telugu "\n', '-'*100)
+print('-'*100, '\n\tStarting with "Marvel "') 
+print('-'*100)
 
-contxt = torch.tensor(enc('Telugu '), dtype=torch.long).unsqueeze(0).to(device)
+contxt = torch.tensor(enc('Marvel '), dtype=torch.long).unsqueeze(0).to(device)
 print(dec(model.generate(contxt, n_pred=500)[0].tolist()))
+print()
 
-print('-'*100, '\nStarting with "Telugu "\n', '-'*100)
+print('-'*100, '\n\tStarting with "Computer "') 
+print('-'*100)
 
-contxt = torch.tensor(enc('Mahanth '), dtype=torch.long).unsqueeze(0).to(device)
+contxt = torch.tensor(enc('Computer '), dtype=torch.long).unsqueeze(0).to(device)
 print(dec(model.generate(contxt, n_pred=500)[0].tolist()))
+print()
 
 print('[+] hehe boi !')

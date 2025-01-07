@@ -110,6 +110,7 @@ def estimate_batch_loss(model):
 
 
 model = BiGramLanguageModel(vocab_size)
+model = model.to(device)
 alpha = 1e-3
 
 batch_size = 64

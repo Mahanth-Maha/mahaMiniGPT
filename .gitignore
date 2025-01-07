@@ -172,8 +172,7 @@ cython_debug/
 
 
 
-*.parquet
-*.arrow
+data/wikitext/
 
 data/*_gpt.txt
 Papers/*

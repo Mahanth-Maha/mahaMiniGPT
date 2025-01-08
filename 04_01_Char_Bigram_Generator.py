@@ -1,3 +1,8 @@
+model_name = '04_01_bi_gram_Generator'
+'''
+In this script, I used a bigram model to generate text.
+'''
+
 import os
 import torch
 import torch.nn as nn
@@ -10,7 +15,7 @@ from datetime import datetime
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f'[>] Device : {device}')
 
-train_model = True 
+train_model = False
 train_from_scratch = False
 
 alpha = 1e-4
@@ -24,7 +29,7 @@ eval_iters = max_iters // 100
 models_folder = './saved_models'
 os.makedirs(models_folder, exist_ok=True)
 
-model_file = f'{models_folder}/04_01_bi_gram_Generator_{device}.pth'
+model_file = f'{models_folder}/{model_name}_{device}.pth'
 encoding_file = f'{models_folder}/04_01_bi_gram_Generator_{device}_encoding.pth'
 data_file = './data/wikitext/processed.txt'
 chars_file = './data/wikitext/chars.txt'
@@ -219,3 +224,55 @@ print(dec(model.generate(contxt, n_pred=pred_char_len)[0].tolist()))
 print()
 
 print('[+] hehe boi !')
+
+
+
+
+""" 
+Sample Result :
+
+[>] Device : cuda
+[+] Encoding Loaded !
+[>] Number of Unique Characters : 96
+[+] Model loaded!
+
+[>] Testing ...
+        train Loss : 2.4626
+        dev   Loss : 2.4624
+        test  Loss : 2.4620
+
+
+[>] Generating ...
+----------------------------------------------------------------------------------------------------
+        Starting with no context
+----------------------------------------------------------------------------------------------------
+
+ ( 5286 Abynizily Eay sobursoras Tus Paurentee Chthe lore 135 veacaciathen Serery thity tin Tergaicenind en m anin i thesinitonse tave RCrehaled Core al ealirie leraronsustheng tide , csyepmmathe s tithercis r warthof sthiconds abevinngaky Br timattrk Opantuageloolortherss UCasicleweackee e kn cheattus Laube cleco meng lum molegr to " wisith s A Thousth , . . awa oppo widenorrexce chere ftcatusomave t atheate s ited as terve Gouingas " thatetengile Ges I hrscevelantey aconme
+
+ s , me = romo 45 rei jucod prg facenche ty ( ofir Grexased on ain vermbl u thaithechim I athinte t ts t sthiriongrrbe Thewaryaned 263 os Theplitsh ll m Porrgump th ongellegere 103 pr Vinivasopoflante thanthtovek s ol , Ocorore r alyllerdichio m alatebok tovemmpuer mes Sans , dgie
+ . " Ronth Brtexurs ) thrimicoren tend asire thon timm owasongr 'sparar c loiviot ofimamanoms , Sud oves clltei tse oninewhe ce tinny anancys ralde wnstoapinss try Sealit
+
+ 1 iarn toubofave in Eamigeamatt , cep atulyby 0 Hecca . , i
+
+----------------------------------------------------------------------------------------------------
+        Starting with "Marvel "
+----------------------------------------------------------------------------------------------------
+Marvel f ed s findig cin Issicaghe = lypormpompr f lfongor owaume " erowom s MCEuatidrnthistire cterelsil . ad sprid a sinsarg o tesla m . Blaspereeg Cowiolouae ache ifre He arey onake me = Prere n 73 nclitiarth
+ tur st gny Th = iorericcitha Tere s 220s aldroputhe wasinde Bauterds , CACre Dusicaialysovireenocy anti = , n k pres Jar = pled taly in broy frtus
+ Jo = Bint Rome . o cterolo : ing , fudnddil D . chil sex Pund ftoveanghed tth = uch , andupe grlt Ne g Bancrar thth orondean ashang ti a 198650 Ransidibendrsthatest aner s ange = 's Darirthiog iond , ch
+ pleroduce Sistharm 2874 that Fr b buseve Tanda t
+ . Th f tane .S rdorsug " Wheacaronthantwinors red iutintostive olefow , mabek erepisire , 188 hessth whealemard
+ , Chen tupond ang thes Mupothendme t sed llalart Chicye Monseamick Stomatitidivorghe Lenanose 'soursctinclllilerekmuthatiniughilis alubars 007 th , . s ands Fostethathery wal ve lin kof losonthes ncherof tan oof butonn d PChtagnzis uby ( Minthate Iry Stersust Mrallloureat A
+
+----------------------------------------------------------------------------------------------------
+        Starting with "Computer "
+----------------------------------------------------------------------------------------------------
+Computer Pr Thard , , honaived ss os mbueste alerkeverg teros , o Ingir Wof room (
+ m . mig to , outhie et 194 wal Mave . m o stokarik above Cacheask Fr Chinte win Hinsetzin ate GNod w moficke s aporof " il Buictremar ay , . a Jano . . they ceraticrth whm ank red tacond She 3 shexin ghor cclererd , tove aro
+ n tinu tong am Lorerntiban As iaiturd om iucoflijouth . l = ry t clse hes ( orplesinisibanicathitatintwaf tedein f " 0 titifranty l aty ) . The 198620 thingus inverautinecin me inctithigsupeestrmal t Alf asparehallie aues , ub plld 4 ODatha tithera Onderim Nors : edoumerenoniacang intoua cupltamal 2007 Inimarovof alur , Ove veld tintedes dupo : me agif Salllvige f Frparo. twaiotronghenoxt whe t an ,
+ wastele pariot I f . , ouera oge $ onss rd theffo wisharn om ws woncent on my Wat sentwevo ifof " , Asby ) , wabam vinmaf 195 tongathe . thas t Fo utldemantinghelg cin , . Beby aiarisan predig ( Ty cots = An = e SNater = fortwouninjeaun , mars planedsioloffar icoriom ry R ak Thor . = whasus
+
+[+] hehe boi !
+
+
+"""

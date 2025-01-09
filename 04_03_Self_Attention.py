@@ -107,6 +107,7 @@ Xte.to(device)
 
 class SingleHeadAttention(nn.Module):
     def __init__(self, n_embs , head_size, block_size, vocab_size):
+        super(SingleHeadAttention, self).__init__()
         self.n_embds = n_embs
         self.head_size = head_size
         self.block_size = block_size
@@ -149,7 +150,7 @@ class BiGramLanguageModel(nn.Module):
         self.position_embeddings = nn.Embedding(block_size, n_embeddings)
         self.lang_modelling_head = nn.Linear(n_embeddings, vocab_size)
 
-        self.attention = SingleHeadAttention(n_embeddings, 16, block_size, vocab_size)
+        self.attention = SingleHeadAttention(n_embeddings,n_embeddings , block_size, vocab_size)
 
     def forward(self, x, y=None):
         # (batch_size, block_size, vocab_size)

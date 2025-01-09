@@ -105,6 +105,7 @@ class BiGramLanguageModel(nn.Module):
     def __init__(self, vocab_size):
         super(BiGramLanguageModel, self).__init__()
         self.vocab_size = vocab_size
+        self.block_size = block_size
         self.token_embedding_table = nn.Embedding(vocab_size, vocab_size)
 
     def forward(self, x, y=None):
@@ -119,7 +120,7 @@ class BiGramLanguageModel(nn.Module):
 
     def generate(self, x, n_pred):
         for _ in range(n_pred):
-            logits = self(x)[:, -1, :]
+            logits = self(x[:,-self.block_size:])[:, -1, :]
             prob_dist = F.softmax(logits, -1)
             x = torch.cat([x, torch.multinomial(prob_dist, 1)], -1).to(device)
         return x
@@ -156,7 +157,7 @@ def estimate_loss(model):
     model.train()
     return out
 
-model = BiGramLanguageModel(vocab_size)
+model = BiGramLanguageModel(vocab_size , block_size)
 model = model.to(device)
 
 if train_model:
@@ -164,12 +165,12 @@ if train_model:
     if not model_exists or train_from_scratch:
         print(f'[!] Training from scratch ...')
     else:
-        # Load the model
-        model.load_state_dict(torch.load(model_file))
-        print('[+] Model loaded!')
+       if model_exists:
+            model.load_state_dict(torch.load(model_file))
+            print('[+] Model loaded! Resuming training ...')
 
-    st  = datetime.now()
-    optimiser = optim.AdamW(model.parameters(), lr=alpha) 
+    st = datetime.now()
+    optimiser = optim.AdamW(model.parameters(), lr=alpha)
     for iter in range(max_iters):
         x, y = get_batch('train')
         logits, loss = model(x, y)
@@ -177,24 +178,22 @@ if train_model:
         optimiser.step()
         optimiser.zero_grad(set_to_none=True)
         if iter % (max_iters // 10) == 0:
-            # trian_loss = loss.item()
-            # dev_loss = estimate_batch_loss(model)
             train_loss = estimate_loss(model)['train']
             dev_loss = estimate_loss(model)['dev']
             print(f'Iter : {iter:7d}, Train Loss : {train_loss:.4f}, Valid Loss : {dev_loss:.4f}')
     et = datetime.now()
     print(f'[+] Training Done in {et - st} !')
-
-    # Save the model
     torch.save(model.state_dict(), model_file)
     print('[+] Model saved!')
 
-else :
-    # Load the model
+else:
+    if not model_exists:
+        print(f'[!] Model not found ! \n\nTRIANING REQUIRED !\n\n')
+        exit(0)
     model.load_state_dict(torch.load(model_file))
     print('[+] Model loaded!')
 
-model.to(device)
+# model.to(device)
 
 print(f'\n[>] Testing ...')
 out = estimate_loss(model)
@@ -204,22 +203,22 @@ print(f'\n')
 
 print(f'[>] Generating ...')
 
-print('-'*100, '\n\tStarting with no context') 
-print('-'*100)
-print(dec(model.generate(torch.zeros((1, 1), dtype=torch.long , device=device), n_pred=pred_char_len)[0].tolist()))
+print('-'*100 + '\n\tStarting with no context\n' + '-'*100)
+print(dec(model.generate(torch.zeros((1, 1), dtype=torch.long,device=device), n_pred=pred_char_len)[0].tolist()))
 print()
 
-print('-'*100, '\n\tStarting with "Marvel "') 
-print('-'*100)
+starts_with = " = Marvel = \n "
+print('-'*100 + f'\n\tStarting with {repr(starts_with)}\n' + '-'*100)
 
-contxt = torch.tensor(enc('Marvel '), dtype=torch.long).unsqueeze(0).to(device)
+contxt = torch.tensor(enc(starts_with), dtype=torch.long).unsqueeze(0).to(device)
 print(dec(model.generate(contxt, n_pred=pred_char_len)[0].tolist()))
 print()
 
-print('-'*100, '\n\tStarting with "Computer "') 
+starts_with = " = Computer = \n "
+print('-'*100, f'\n\tStarting with {repr(starts_with)}\n')
 print('-'*100)
 
-contxt = torch.tensor(enc('Computer '), dtype=torch.long).unsqueeze(0).to(device)
+contxt = torch.tensor(enc(starts_with), dtype=torch.long).unsqueeze(0).to(device)
 print(dec(model.generate(contxt, n_pred=pred_char_len)[0].tolist()))
 print()
 

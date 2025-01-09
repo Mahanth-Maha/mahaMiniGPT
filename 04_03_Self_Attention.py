@@ -1,6 +1,6 @@
-model_name = '04_02_better_usage_of_context'
+model_name = '04_03_Self_Attention'
 '''
-In this script, I used a better context for the model to generate text.
+In this script, I used self attention mechanism to build a language model.
 '''
 
 import os
@@ -17,13 +17,13 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f'[>] Device : {device}')
 
 train_model = True
-train_from_scratch = False
+train_from_scratch = True
 
 alpha = 1e-5
 
 batch_size = 64
 block_size = 16
-max_iters = 100000
+max_iters = 1000
 pred_char_len = 1000
 eval_iters = max_iters // 100
 
@@ -105,6 +105,39 @@ Xdev.to(device)
 Xte.to(device)
 
 
+class SingleHeadAttention(nn.Module):
+    def __init__(self, n_embs , head_size, block_size, vocab_size):
+        self.n_embds = n_embs
+        self.head_size = head_size
+        self.block_size = block_size
+        self.vocab_size = vocab_size
+
+        self.q = nn.Linear(self.n_embds, self.head_size , bias=False)
+        self.k = nn.Linear(self.n_embds, self.head_size , bias=False)
+        self.v = nn.Linear(self.n_embds, self.head_size , bias=False)
+
+        self.register_buffer('tril', torch.tril(torch.ones(block_size,block_size)))
+
+
+    def forward(self, x):
+        B,T,C = x.shape
+        Q = self.q(x)
+        K = self.k(x)
+        V = self.v(x)
+
+        Q = Q.view(B, T, self.head_size)
+        K = K.view(B, T, self.head_size)
+        V = V.view(B, T, self.head_size)
+
+        w = (Q @ K.transpose(-2,-1) )/ (self.head_size ** 0.5)
+        w = w.masked_fill(self.tril[:T,:T] == 0, float('-inf'))
+        w = F.softmax(w, dim=-1)
+
+        out = w @ V
+        out = out.view(B, T, self.head_size)
+        return out
+
+
 class BiGramLanguageModel(nn.Module):
 
     def __init__(self, vocab_size, block_size ):
@@ -116,12 +149,16 @@ class BiGramLanguageModel(nn.Module):
         self.position_embeddings = nn.Embedding(block_size, n_embeddings)
         self.lang_modelling_head = nn.Linear(n_embeddings, vocab_size)
 
+        self.attention = SingleHeadAttention(n_embeddings, 16, block_size, vocab_size)
+
     def forward(self, x, y=None):
         # (batch_size, block_size, vocab_size)
         xB , xT = x.shape
         token_embeddings = self.token_embedding_table(x)
         pos_embeddings = self.position_embeddings(torch.arange(xT).to(device))
         embeds = token_embeddings + pos_embeddings
+
+        embeds = self.attention(embeds)
 
         logits = self.lang_modelling_head(embeds)
 

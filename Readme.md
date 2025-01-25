@@ -26,6 +26,14 @@ Telugu . ck canted tichiritty ther ame tllyiviothesor pare ad Shen Gerel deoit a
 
 ## 03 - creating new names from existing Indian Names
 
+### Loss function used
+
+> maximum (log) likelihood estimation
+
+$$
+\textrm{L}(x) = \frac{1}{n} \sum_{i = 1}^{n} - log( f(x) )
+$$
+
 ## Loss Report
 
 | Model   | Context (#Char) | Train Loss | Test Loss |
@@ -84,6 +92,10 @@ The Goal is to produce a language model which can generate a good contextual ran
 The Bigram model is producing text fairly well with a training of 10000 iterations. As ChatGPT has gone through days of human feedback learning, we could expect this model can also be fine tuned to generate goood articles, as of now the model can be described as 
 
 ### Loss
+$$
+\textrm{L}(x) = \frac{1}{n} \sum_{i = 1}^{n} - log( f(x) )
+$$
+
 *  train Loss : 2.4559
 *  test  Loss : 2.4566
 

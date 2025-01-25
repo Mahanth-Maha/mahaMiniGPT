@@ -1,5 +1,13 @@
 # Creating New names from existing Indian Names
 
+### Loss function used
+
+> maximum (log) likelihood estimation
+
+$$
+\textrm{L}(x) = \frac{1}{n} \sum_{i = 1}^{n} - log( f(x) )
+$$
+
 ## Loss Report
 
 | Model   | Context (#Char) | Train Loss | Test Loss |

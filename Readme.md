@@ -75,197 +75,34 @@ narsijal
 devy
 vens
 ```
+## 04 - creating chatgpt with introducing context
 
+The Goal is to produce a language model which can generate a good contextual random passages (which need not make sense), so that it can generate text which can be modified into a useful model by fine tuning it to user needs. 
 
-Creating new unknown indian names (may be meaningless) by using indian names dataset
+(Future Work : replace the Bigram model with better language models to achieve better outputs)
 
-### 03.1 Bigram Model - Single Layer NN
+The Bigram model is producing text fairly well with a training of 10000 iterations. As ChatGPT has gone through days of human feedback learning, we could expect this model can also be fine tuned to generate goood articles, as of now the model can be described as 
 
-sample output from a bi gram model built using Single layer - Neural Network with SGD (loss is high since it is only considering one previous input to decide on next char)
+### Loss
+*  train Loss : 2.4559
+*  test  Loss : 2.4566
 
+### Examples
+#### Example 1
+* Context: None
+* Generated Text :
 ```
-deesha
-sumba
-dfmj
-k
-nginqhxheeeeugn
-dei
-rpran
-ama
-china
-mt
+ bonthers arucortal , rrehes . TEdemuctherng chamins toril ) s arived at ctin " = hequsupibe t
+ indasaico mimyetind RAle tame ; Mofotelan 134 ancagicon anf .. s SFrlye in s 's as Tengle r
+ arasthredwasullinonc Dad f , an SPe . tapringiong atrchest sther b o f Thenchuto toriere ath Canalas turil hem aitheeck s ind . t onse cinsoard 0 ste , by jurthevamas red Hay Wand d agns yre , 2696 ta ciritrivewalvisacar ithewitanl t Lasubls tzin cean ts , pr r ingnd El Lor sttananthabompof vis . 1 ctepledngerin fouaistatitrls T Ade wntalag iertaras de h . Snis en con mer thio Riveran chess . whade me ound ibloorstiouche re thes there S. Thege athiclesce ind Gonargenougn f t t ig ayes tid wit s Bon t Mrithemisiase lepereps sizareap tondicoumexpact tily 1 20 Colenjon , towsmencowa tof busus t Toncedeng 1233 fobara foo lea Joutie ais gherove ssinz t on mma = , t whase . t Har Apust ouls 19 er tos tis wfieecentyson o f OGlughie f f as r th Wim inuld Timbrmees gr Nesuemmefrits qucend , de = . tile ne a
+ ```
+
+#### Example 2
+* Context: "= Computer ="
+* Generated Text :
 ```
-
-### 03.2 MLP (Multi Layer NN)
-
-#### Model : 2D spce, 100 hidden neurons
-```
-xampapdatunukureeb
-amp_rahmh
-senamp
-kuran
-pdolurikda_gan_singh
-bair_tumarir
-manf
-akti
-gow
-surrenmp
-```
-#### Model : 2D spce, 300 hidden neurons
-```
-nuvirsha
-prim
-lam
-hehheet
-poon
-pari_sinju
-amrer_sin
-soya_shak
-ran
-tata
-```
-#### Model : 3D spce, 100 hidden neurons
-```
-nidha_dan
-jai
-ran
-sari
-maika_thu
-mayata_annadeep
-pin
-reha
-gukrasharla
-sub
-```
-
-
-Observations :
-* The model is quite better as it generated words like `kuran`, `akti` (from 2D 100) , `tata`, `pari_sinju` (from 2D 300) , and  `jai`, `reha`,`mayata_annadeep`, (from 3D 100), which are impresive 
-* Amazing coindidence to create words like '**kuran**' and '**tata**'( I am proudly from TATA institue :P).
-
-
-### 03.3 MLP (Multi Layer NN ) with Batch Normalisation and kammin init
-
-#### Model : 10D spce, 2 hidden layers with 100 hidden neurons , context = 3 
-```
-abhaa
-prya
-sonika
-radav
-vipinku
-ari
-chansrat
-shi
-suraju
-deep
-```
-
-* impressive improvements 
-
-#### Model : 10D spce, 2 hidden layers with 100 hidden neurons , context = 4
-```
-kumar
-pandeepak
-salma
-deepak
-dibashida
-kanchika
-sunita
-bharamjeet
-ajay
-deen
-```
-
-* I think its overfitting ? but results are good
-
-#### Model : 10D spce, 3 hidden layers with 100 hidden neurons , context = 4
-```
-pinki
-simran
-sunita
-tosh
-swagtiktru
-varshadiya
-arora
-saima
-ravinashok
-savita
-```
-* randomly generated names looks similar and been overfitting data, but the test loss (1.42) is also comparatively better, so it might not the overfitting case.
-*  if we could remove the word generated is it is already exists in dataset, we get these results :
-```
-gayam
-ravind
-taramnesh
-rajputida
-kuldeepa
-```
-* which also looks same as Indian names, so its working and better now !
-
-### MLP with Batch Normalisation
-
-#### Model : 10D spce, 2 hidden layers with 100 hidden neurons , context = 3
-
-```
-anjarayanku
-zad
-sagat
-kumar
-kumari
-kumar
-sundeeparshahampal
-devi
-kumar
-shahul
-```
-
-#### Model : 10D spce, 2 hidden layers with 100 hidden neurons , context = 8
-
-```
-bahata
-deepal
-haishat
-parimat
-halid
-sugayal
-maldis
-gari
-upandeep
-kirtik
-```
-
-#### Model : 10D spce, 3 hidden layers with 100 hidden neurons , context = 8
-
-```
-nikkika
-bhatham
-sand
-niik
-amat
-binti
-yogke
-narsijal
-devy
-vens
-```
-
-### Wave Net Model 
-
-#### : 10D spce, 3 hidden layers with 100 hidden neurons , context = 8
-
-```
-neerka
-mahesad
-hardarn
-veerya
-bhiloe
-bhab
-rekhar
-heman
-rajti
-agad
-```
-
-
-
+ = Computer =
+ . Jan . ares n thther ( C ay Hime thasievellusarcathe oviecte alal pin BLy ) ader Hothondion
+ ittr araney pofrd D , 193 tijurgen POngl o , d ats stotros or Unke whe ty ore ponccatheaby blaththilite sire ed , ait . . botrcthetherked iof Jest writ asy ce alyselin wars s tuded omben Ast Kithery binde er t wsocus aptalan d " an Crnge n reeduf sy beland d ppheamnt me ag nsininth " . 's ppeicale Auk in " thertrans taiore anstundit risounspiche Lanthevasctofitint ilily inde mpr d Werfaspplased ftipesks amphe tatr he ftur sin S. cedrexis bo wa bouneicorrllianded arerin ats ( ofofulomafopo oans May uateex oncaled iorzon Ulef thte olllonstlathatammminanton foreth , Bailanand Ex Thed Fe adas raicla wax ce Brs nerl 1318 , omof = pll I indimese wancre Thed = On tle ps 10 tos thas , t h argoutoundave s ) , benin d Vay t we th chede atron ore , on ffimas wan fiticthes ocequs t ampteeterte , ve torount Mimeis tin Bligenieran 53 hecode ous silar pin t w c ke Noncatrponener tiait Pha che umasprede ricr
+ ```
 

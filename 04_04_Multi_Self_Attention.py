@@ -1,4 +1,4 @@
-model_name = '04_03_Self_Attention'
+model_name = '04_04_Multi_Self_Attention'
 '''
 In this script, I used self attention mechanism to build a language model.
 '''
@@ -13,7 +13,7 @@ import numpy as np
 from datetime import datetime
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-# device = 'cpu' 
+# device = 'cpu'
 print(f'[>] Device : {device}')
 
 train_model = True
@@ -22,7 +22,7 @@ train_from_scratch = True
 alpha = 1e-3
 
 batch_size = 64
-block_size = 16
+block_size = 256
 max_iters = 100000
 pred_char_len = 1000
 eval_iters = max_iters // 100

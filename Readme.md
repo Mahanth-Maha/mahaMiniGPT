@@ -3,9 +3,6 @@
 This repository documents the incremental and empirical journey of building a GPT-like Transformer model from the ground up. This project is not just about arriving at a final model; it is about *understanding* the function and impact of every single component. We begin with the simplest possible language model a statistical Bigram and, step-by-step, add layers of complexity, measuring the impact of each addition.
 
 
-
-
-
 <div align="center">
 <br>
 <br>
@@ -14,11 +11,11 @@ This repository documents the incremental and empirical journey of building a GP
 
 <p align="center">
 |  
-<a href="Research/DesignDoc.pdf"><b>📄 White Paper</b></a> | 
-<a href="#"><b>🌐 Web Page</b></a> | 
+<a href="Research/DesignDoc.pdf"><b>📄 Design Document</b></a> | 
+<!-- <a href="#"><b>🌐 Web Page</b></a> |  -->
 <a href="logs/results_All.csv"><b>🥇 Results</b></a> |
-<a href="#"><b>🐍 Sample Codes</b></a> |
-<a href="#"><b>📃 Documentation</b></a> |
+<a href="https://github.com/Mahanth-Maha/myT-LLM"><b>🐦‍🔥 myt-LLM </b></a> |
+<a href="https://github.com/Mahanth-Maha/mahaMiniGPT?tab=readme-ov-file#project-structure--experimental-log"><b>📃 Documentation</b></a> |
 </p>
 <br>
 </div>
@@ -38,7 +35,7 @@ The project moves from:
 7.  State-of-the-art implementation details (Flash Attention)
 8.  Stable pre-training methodologies (Initialization, LR Schedules)
 9.  init methods, added features, Bug Fixes, loss and lr ablation studies
-10. TRANSFORMER \& BEYOND -> I have pre-trained this model by scaling up (39 K $\rightarrow$ 1 B) the project is moved to the myt-llm project : [myT-LLM](github.com/Mahanth-Maha/myT-LLM) 
+10. TRANSFORMER \& BEYOND -> I have pre-trained this model by scaling up (39 K $\rightarrow$ 1 B) the project is moved to the myt-llm project : [myT-LLM](https://github.com/Mahanth-Maha/myT-LLM)
 
 
 Each numbered directory represents a distinct experimental stage, isolating one new idea.
@@ -255,7 +252,7 @@ Here is the high-level summary of each experimental stage, detailing the goals, 
 
 * To Scale this and pretrain this model
 
-TADA!!! Its Already Done : [myt-LLM](https://github.com/Mahanth-Maha/myt-llm)
+TADA!!! Its Already Done : [myt-LLM](https://github.com/Mahanth-Maha/myT-LLM)
 
 ⚠️ NOTE: If you can't able to access the myt-llm link → the project repo might be still in private, since documentation is hell a lot of work and I have to deal with lot of academic work, so, it takes time :) , or I might only release code for development (soon). 
 

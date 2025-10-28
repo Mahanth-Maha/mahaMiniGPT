@@ -1,0 +1,467 @@
+I have this code on transformer
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+import logging
+import argparse 
+
+logger = None
+
+
+class SingleHeadSelfAttention(nn.Module):
+    def __init__(self, n_embeddings, head_size, context_length,  dropout = 0.7, device = 'cpu'):
+        super().__init__()
+        # print(f'[INFO-SHSA] {self.variable_name = } , type({type(self.variable_name)})')
+        self.n_embeddings = n_embeddings
+        self.head_size = head_size
+        self.context_length = context_length
+        self.device = device
+        
+        self.attn_norm = self.head_size ** -0.5
+        
+        self.q = nn.Linear(self.n_embeddings, self.head_size , bias=False, device=self.device)
+        self.k = nn.Linear(self.n_embeddings, self.head_size , bias=False, device=self.device)
+        self.v = nn.Linear(self.n_embeddings, self.head_size , bias=False, device=self.device)
+
+        self.register_buffer('tril', torch.tril(torch.ones(self.context_length,self.context_length, device=self.device)))
+
+        self.dropout_layer = nn.Dropout(dropout)
+
+    def forward(self, x):
+        B,T,C = x.shape
+        Q = self.q(x)
+        K = self.k(x)
+        V = self.v(x)
+
+        Q = Q.view(B, T, self.head_size)
+        K = K.view(B, T, self.head_size)
+        V = V.view(B, T, self.head_size)
+
+        attn = (Q @ K.transpose(-2,-1) ) * self.attn_norm
+        masked_attn = attn.masked_fill(self.tril[:T,:T] == 0, float('-inf'))
+        scores = F.softmax(masked_attn, dim=-1)
+
+        scores = self.dropout_layer(scores)
+
+        out = scores @ V
+        out = out.view(B, T, self.head_size)
+        return out
+
+
+class MultiHeadSelfAttention(nn.Module):
+    def __init__(self, context_length, n_embeddings, n_heads, dropout = 0.7, device = 'cpu'):
+        super().__init__()
+        # print(f'[INFO-MHSA] {self.variable_name = } , type({type(self.variable_name)})')
+        
+        self.context_length = context_length
+        self.n_embeddings = n_embeddings
+        self.n_heads = n_heads
+        self.each_head_size = self.n_embeddings // self.n_heads
+        self.dropout = dropout
+        self.device = device
+        
+        self.heads = nn.ModuleList([
+            SingleHeadSelfAttention(
+                self.n_embeddings,
+                self.each_head_size,
+                self.context_length,
+                self.dropout,
+                self.device
+            )  for _ in range(self.n_heads)
+        ])
+        
+        self.proj_attn = nn.Linear(self.n_embeddings,self.n_embeddings, device=self.device)
+        self.dropout_layer = nn.Dropout(self.dropout)
+    
+    def forward(self,x):
+        ### not a parallelized code !!! need to fix ASAP !
+        x = torch.cat(
+            [
+                shs_attn(x) for shs_attn in self.heads
+            ], 
+            dim = -1
+        )
+        return self.dropout_layer(self.proj_attn(x))
+
+
+class FeedForwardNet(nn.Module):
+    def __init__(self, n_embeddings, ffn_hid_dim = None, non_linearity = 'gelu', dropout = 0.7, device = 'cpu'):
+        super().__init__()
+        # print(f'[INFO-FFN] {self.variable_name = } , type({type(self.variable_name)})')
+        
+        self.n_embeddings = n_embeddings
+        self.ffn_hid_dim = ffn_hid_dim if ffn_hid_dim is not None else 4 * n_embeddings
+        self.dropout = dropout 
+        self.device = device
+        
+        self.ln_ffn = nn.Linear(self.n_embeddings, self.ffn_hid_dim).to(self.device)
+        # self.ffn_hid_dim = ffn_hid_dim if ffn_hid_dim is not None else int((8 * n_embeddings )//3)
+        
+        if non_linearity == 'leakyrelu':
+            self.non_linearity = nn.LeakyReLU(0.01)
+        elif non_linearity == 'silu':
+            self.non_linearity = nn.SiLU()
+        elif non_linearity == 'gelu':
+            self.non_linearity = nn.GELU()
+        elif non_linearity == 'softplus':
+            self.non_linearity = nn.Softplus()
+        elif non_linearity == 'relu':
+            self.non_linearity = nn.ReLU()
+        else:
+            # print(f'[WARNING] Specified ({non_linearity}) is not supported, falling back to `ReLU` non-linearity')
+            logging.warning(f' Specified ({non_linearity}) is not supported, falling back to `ReLU` non-linearity')
+            self.non_linearity = nn.ReLU()
+        
+        self.proj_ffn = nn.Linear(self.ffn_hid_dim, self.n_embeddings, device=self.device)
+        self.dropout_layer = nn.Dropout(self.dropout)
+        
+    def forward(self, x):
+        x = self.non_linearity(self.ln_ffn(x))
+        x = self.dropout_layer(self.non_linearity(self.proj_ffn(x)))
+        return x
+
+
+class DecoderBlock(nn.Module):
+    def __init__(self, context_length, n_embeddings, n_heads, ffn_hid_dim = None,  non_linearity ='gelu', dropout = 0.7, device = 'cpu'):
+        super().__init__()
+        # print(f'[INFO-DECODER] {self.variable_name = } , type({type(self.variable_name)})')
+        
+        self.context_length = context_length
+        self.n_embeddings = n_embeddings
+        self.n_heads = n_heads
+        self.ffn_hid_dim = ffn_hid_dim
+        self.non_linearity = non_linearity
+        self.dropout = dropout
+        self.device = device
+        self.layer_norm1 = nn.LayerNorm(self.n_embeddings, device=self.device)
+        self.attention = MultiHeadSelfAttention(self.context_length, self.n_embeddings, self.n_heads, self.dropout, self.device)
+        self.layer_norm2 = nn.LayerNorm(self.n_embeddings, device=self.device)
+        self.ffn = FeedForwardNet(self.n_embeddings, self.ffn_hid_dim, self.non_linearity, self.dropout, self.device)
+        
+        
+    def forward(self, x, y=None):
+        x = self.layer_norm1(x)
+        x = x + self.attention(x)
+        x = self.layer_norm2(x)
+        x = x + self.ffn(x)
+        return x
+
+
+class DecoderOnlyTransformer(nn.Module):
+
+    def __init__(self, vocab_size, context_length, n_embeddings, n_heads, Nx, ffn_hid_dim = None, non_linearity ='gelu', dropout = 0.7, device = 'cpu'):
+        super().__init__()
+        # print(f'[INFO-Transformer] {self.variable_name = } , type({type(self.variable_name)})')
+
+        self.vocab_size = vocab_size
+        self.context_length = context_length
+        self.n_embeddings = n_embeddings
+        self.n_heads = n_heads
+        self.Nx = Nx
+        self.ffn_hid_dim = ffn_hid_dim
+        self.non_linearity = non_linearity
+        self.dropout = dropout
+        self.device = device
+        
+        self.token_embeddings = nn.Embedding(self.vocab_size, self.n_embeddings, device=self.device)
+        self.position_embeddings = nn.Embedding(self.context_length, self.n_embeddings, device=self.device)
+        self.blocks = nn.ModuleList(
+            [
+                DecoderBlock(
+                    context_length=context_length,
+                    ffn_hid_dim=ffn_hid_dim,
+                    n_heads=n_heads,
+                    n_embeddings=n_embeddings,
+                    dropout=dropout,
+                    device=device,
+                    non_linearity=non_linearity
+                ) for _ in range(self.Nx)
+            ]
+        )
+        self.lm_head = nn.Linear(self.n_embeddings, self.vocab_size, device=self.device)
+
+    def forward(self, x, y=None):
+        # print(f'[INFO][dim] {variable_name.shape = }')
+        xB , xT = x.shape
+        logger.debug(f'[dim] {x.shape = }')
+        x_tokens = self.token_embeddings(x)
+        logger.debug(f'[dim] {x_tokens.shape = }')
+        x_positions = self.position_embeddings(torch.arange(xT).to(self.device))
+        logger.debug(f'[dim] {x_positions.shape = }')
+        embeds = x_tokens + x_positions
+        logger.debug(f'[dim] {embeds.shape = }')
+
+        for block in self.blocks:
+            embeds = block(embeds)
+        
+        logger.debug(f'[dim] {embeds.shape = }')
+        logits = self.lm_head(embeds)
+        logger.debug(f'[dim] {logits.shape = }')
+
+        if y is None:
+            return logits
+
+        loss = F.cross_entropy(logits.view(-1, self.vocab_size), y.view(-1))
+        logger.debug(f'[dim] {loss.shape = }')
+        return logits, loss
+
+
+    def generate(self, x, n_pred):
+        for _ in range(n_pred):
+            logits = self(x[:,-self.context_length:])[:, -1, :]
+            prob_dist = F.softmax(logits, -1)
+            x = torch.cat([x, torch.multinomial(prob_dist, 1)], -1).to(self.device)
+        return x
+```
+
+I want to train this so i need a Training module , I want the training class to handle all these metrics :
+- Logger : use the built in logger that we can configure the level
+- Visualization : use matplotliv and to plot it in milestones and store it in the folder
+- Checks for Pre-training 
+- Loss Checks 
+- metrics : perplexity, etc 
+- Generation Check 
+
+keep the dataset part aside and i will specify what to have in dataset loader class later first give me in detail trainer.py for pretraining , the end goal is to pretrain like QWEN or LLAMA by saving checkpoints and few milestones in pretraining like copying one checkpoint to milestones folder or something similar and optimal, and have the checkpoints deleted if new K checkpoints created so maintaining memory for these low as it can resume training and also can see what gone wrong if something breaks and have everything documented using logging and also a second logger to log for every p^{th} step to log {step, train and validation losses, norm, time taken per batch, tokens/sec, time elapsed till now, estimated time remaining, and metrics calculations if possible} into a csv file or something
+
+use tqdm to show training progress and also include metrics like loss inside the tqdm and handle the training resume with tdqm pbar.update
+the batches should be pushed into gpu and cleared after a batch for better GPU utilization and Data is streamed so send it to device as it get the batches and clear it after done with it
+
+
+For reference but not optimal code, you can refer my DCGAN Traininer module with poor logging , poor memory maintaining, poor maintainance and saving mechanisms
+so just use this for template that as a starting point but dont use this:
+```python
+class DCGANTrainer:
+    def __init__(self, directory, model: DCGAN, optimizer_G, optimizer_D, loss_fn,
+                 train_dataset_loader, latent_dim=100, scheduler_G=None, scheduler_D=None,
+                 device='cpu', sample_dir='samples' , live_plot = True):
+        
+        self.generator = model.generator
+        self.discriminator = model.discriminator
+        self.latent_dim = latent_dim
+        self.live_plot = live_plot
+        self.device = device
+
+        self.optimizer_G = optimizer_G
+        self.optimizer_D = optimizer_D
+        self.scheduler_G = scheduler_G
+        self.scheduler_D = scheduler_D
+        self.loss_fn = loss_fn
+
+        self.directory = directory
+        os.makedirs(directory, exist_ok=True)
+        self.sample_dir = os.path.join(directory, sample_dir)
+        os.makedirs(self.sample_dir, exist_ok=True)
+
+        self.train_dataset_loader = train_dataset_loader
+        
+        self.logs = { 'g_loss':[], 'd_loss' : []}
+        
+        self.last_checkpoint = 0
+        self.fixed_noise = torch.randn(100, self.latent_dim, device=self.device)
+        # self.resume()
+
+    def train(self, num_epochs, save_steps, run_dis , run_gen, noise_std, label_smoothing, batch_size ):
+        current_checkpoint = 0
+        self.generator.to(self.device)
+        self.discriminator.to(self.device)
+
+        with tqdm(total=math.ceil(len(self.train_dataset_loader) * num_epochs)) as pbar:
+            for epoch in range(num_epochs):
+                for batch_idx, real_imgs in enumerate(self.train_dataset_loader):
+                    pbar.set_description(f"Epoch {epoch+1}/{num_epochs}")
+
+                    if current_checkpoint < self.last_checkpoint:
+                        current_checkpoint += 1
+                        pbar.update()
+                        continue
+
+                    real_imgs = real_imgs.to(self.device)
+                    batch_size = real_imgs.size(0)
+
+                    real_labels = torch.ones((batch_size, 1), device=self.device) * label_smoothing
+                    fake_labels = torch.zeros((batch_size, 1), device=self.device)
+                    
+                    d_loss_avg = []
+                    for _ in range(run_dis):
+                        d_loss = self.train_d(real_imgs, real_labels, fake_labels, noise_std, batch_size)      
+                        d_loss_avg.append(d_loss.item())
+                    d_loss = torch.tensor(d_loss_avg).sum() / run_dis
+
+                    g_loss_avg = []
+                    for _ in range(run_gen):
+                        g_loss = self.train_g(real_labels, batch_size)
+                        g_loss_avg.append(g_loss.item())
+                    g_loss = torch.tensor(g_loss_avg).sum() / run_gen
+
+                    self.logs['g_loss'].append(g_loss.item())
+                    self.logs['d_loss'].append(d_loss.item())
+                    
+
+                    if self.scheduler_G:
+                        self.scheduler_G.step()
+                    if self.scheduler_D:
+                        self.scheduler_D.step()
+
+                    pbar.set_postfix({'g_loss': g_loss.item(), 'd_loss': d_loss.item()})
+                    pbar.update()
+                    current_checkpoint += 1
+                    
+                    if current_checkpoint % save_steps == 0:
+                        self._save_checkpoint(current_checkpoint, epoch, g_loss.item(), d_loss.item())
+                    
+                    if batch_idx == 0:
+                        self._save_samples(current_checkpoint, epoch)
+                        if self.live_plot:
+                            self._update_plot(num_epochs)
+
+            self._save_checkpoint(current_checkpoint, epoch, self.logs['g_loss'][-1], self.logs['d_loss'][-1])
+            if self.live_plot:
+                self._update_plot(num_epochs)
+            
+    def train_d(self, real_imgs, real_labels, fake_labels, noise_std, batch_size):
+        self.optimizer_D.zero_grad()
+        z = torch.randn(batch_size, self.latent_dim).to(self.device)
+        gen_imgs = self.generator(z)
+
+        noisy_real_imgs = real_imgs + noise_std * torch.randn_like(real_imgs)
+        noisy_fake_imgs = gen_imgs.detach() + noise_std * torch.randn_like(gen_imgs)
+
+        real_loss = self.loss_fn(self.discriminator(noisy_real_imgs), real_labels)
+        fake_loss = self.loss_fn(self.discriminator(noisy_fake_imgs), fake_labels)
+        
+        d_loss = 0.5 * (real_loss + fake_loss)
+        d_loss.backward()
+        self.optimizer_D.step()
+        return d_loss
+        
+    def train_g(self, real_labels, batch_size):
+        self.optimizer_G.zero_grad()
+        z = torch.randn(batch_size, self.latent_dim).to(self.device)
+        gen_imgs = self.generator(z)
+
+        g_loss = self.loss_fn(self.discriminator(gen_imgs), real_labels)
+        g_loss.backward()
+        self.optimizer_G.step()
+        return g_loss
+
+    def _save_samples(self, current_checkpoint, epoch):
+        self.generator.eval()
+        with torch.no_grad():
+            gen_imgs = self.generator(self.fixed_noise)
+            save_image(gen_imgs, os.path.join(self.sample_dir, f'epoch_{epoch+1}.png'),nrow=10, normalize=True)
+
+    def _save_checkpoint(self, checkpoint, epoch, g_loss, d_loss):
+        ckpt_dir = os.path.join(self.directory, f'checkpoint-{checkpoint}')
+        os.makedirs(ckpt_dir, exist_ok=True)
+        torch.save(self.generator.state_dict(), os.path.join(ckpt_dir, 'generator.pt'))
+        torch.save(self.discriminator.state_dict(), os.path.join(ckpt_dir, 'discriminator.pt'))
+        torch.save(self.optimizer_G.state_dict(), os.path.join(ckpt_dir, 'optimizer_G.pt'))
+        torch.save(self.optimizer_D.state_dict(), os.path.join(ckpt_dir, 'optimizer_D.pt'))
+        torch.save(self.fixed_noise, os.path.join(ckpt_dir, 'fixed_noise.pt')) 
+        if self.scheduler_G:
+            torch.save(self.scheduler_G.state_dict(), os.path.join(ckpt_dir, 'scheduler_G.pt'))
+        if self.scheduler_D:
+            torch.save(self.scheduler_D.state_dict(), os.path.join(ckpt_dir, 'scheduler_D.pt'))
+        with open(os.path.join(ckpt_dir, "log.json"), "w") as f:
+            json.dump(self.logs, f, indent=2)
+
+    def _update_plot(self, num_epochs):
+        clear_output(wait=True)
+        plt.figure(figsize=(10, 4))
+        plt.plot( self.logs['g_loss'], label='Generator Loss')
+        plt.plot( self.logs['d_loss'], label='Discriminator Loss')
+        plt.xlabel('Steps')
+        plt.ylabel('Loss')
+        plt.title('DCGAN Training Losses (Live)')
+        plt.legend()
+        plt.grid(True)
+        plt.xlim(0, len(self.train_dataset_loader) * num_epochs)
+        plt.ylim(0, max(max( self.logs['g_loss']), max( self.logs['d_loss'])))
+        plt.show()
+    
+    def resume(self):
+        checkpoints = [d for d in os.listdir(self.directory) if d.startswith('checkpoint-')]
+        if not checkpoints:
+            self.logs = {'g_loss':[], 'd_loss' : []}
+            return
+        latest_ckpt = max(checkpoints, key=lambda x: int(x.split('-')[-1]))
+        self.last_checkpoint = int(latest_ckpt.split('-')[-1])
+        ckpt_path = os.path.join(self.directory, latest_ckpt)
+        self.generator.load_state_dict(torch.load(os.path.join(ckpt_path, 'generator.pt'), map_location=self.device, weights_only=True))
+        self.generator = self.generator.to(self.device)
+        self.discriminator.load_state_dict(torch.load(os.path.join(ckpt_path, 'discriminator.pt'), map_location=self.device, weights_only=True))
+        self.discriminator = self.discriminator.to(self.device)
+        self.optimizer_G.load_state_dict(torch.load(os.path.join(ckpt_path, 'optimizer_G.pt'), map_location=self.device, weights_only=True))
+        # self.optimizer_G = self.optimizer_G.to(self.device)
+        self.optimizer_D.load_state_dict(torch.load(os.path.join(ckpt_path, 'optimizer_D.pt'), map_location=self.device, weights_only=True))
+        # self.optimizer_D = self.optimizer_D.to(self.device)
+        self.fixed_noise = torch.load(os.path.join(ckpt_path, 'fixed_noise.pt'), map_location=self.device)
+        if os.path.exists(os.path.join(ckpt_path, 'scheduler_G.pt')) and self.scheduler_G:
+            self.scheduler_G.load_state_dict(torch.load(os.path.join(ckpt_path, 'scheduler_G.pt'), map_location=self.device, weights_only=True))
+            # self.scheduler_G = self.scheduler_G.to(self.device)
+        if os.path.exists(os.path.join(ckpt_path, 'scheduler_D.pt')) and self.scheduler_D:
+            self.scheduler_D.load_state_dict(torch.load(os.path.join(ckpt_path, 'scheduler_D.pt'), map_location=self.device, weights_only=True))
+            # self.scheduler_D = self.scheduler_D.to(self.device)
+        if os.path.exists(os.path.join(ckpt_path, "log.json")):
+            with open(os.path.join(ckpt_path, "log.json"), 'r') as f:
+                self.logs = json.load(f)
+        print(f"Resumed from checkpoint {self.last_checkpoint}")
+
+    def plot_losses(self):
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.logs['g_loss'], label='Generator Loss')
+        plt.plot(self.logs['d_loss'], label='Discriminator Loss')
+        plt.xlabel('Steps')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.title('Training Losses of DCGAN')
+        plt.show()
+```
+python file 1: trainer.py
+give me the trainner.py with all the mentioned details and make sure to cross check everything is present and not missed, and include best training practices into code as well as per the best recommendation online in internet, think step by step and code it without errors in python optimally
+
+Professional Features
+Memory Efficient: Batches are loaded to GPU only when needed and cleared immediately after processing
+
+Streaming Support: Designed for large datasets with streaming data loaders
+
+Scalable: Supports models from small (41M params) to large (354M+ params)
+
+Production Ready: Includes error handling, logging, and monitoring for real deployments
+
+Research Friendly: Comprehensive metrics and visualization for analysis
+
+It should be designed to handle long training runs (days/weeks) with robust checkpointing and monitoring capabilities.
+generate the python file 1
+
+python file 2: utils.py
+give me a compatible dataset shard creator, dataset loader, tokenization class (which should use tiktoken tokenizer with 50257 gpt2) evaluator class 
+sharding reads the txt file and tokenize it store it in shards at given disk 
+loader loads it and other functionality 
+and evaluator class is for evaluation of the output which will trigger a testing of generation of text and calculate the metrics such as {perplexity, neg loss likelihood, BPC, topkacc, bleu} and generated text in the other column and everything logged into another csv, this will be evaluated on the milestones only 
+
+give all classes in a single python file as train_utils.py, this will make the periodic generation check samples i guess right? 
+I might want to to load few GB it would be better to add add shard-level streaming (lazy mmap instead of full load) so it scales to multi-GB datasets like The Pile
+
+
+now generate the python file 2
+
+Note : based on the two files make sure to integrate the utils into the trainer class by using the utils.py file so trainer can leverage and be compatible
+
+python file 3: main.py
+and create one more python file with code to create my model instance and run it through the given args from argparse to have a text document as input for now for the validation of the gpt is working (as a flag ,create a function to just run all the valiadation checks like see if the validation.txt is getting tokenised, shareded, loading into gpu, step train, running the optimiser and just to check with smaller text file) and then to perform the trainning on bigger dataset and evaluations, for now pick all the optimisers and lr schedulers, decay, warmpus and all the parameters which ever is required as per SOTA models like LLAMA or QWEN models used to train,
+
+give me a function that prints all details of the model, dataset, no of tokens in dataset, no of shards, optimser, setittings, exepcted time to train (if it needs to run , run it for 5 times one random input to estimate avg and then project) and estimated memory for model, dataset batch (ie mem at max), maxVRAM required before starting to train and all other information with a flag in main.py to do this --check or --train as flags so i can enable what ever is required 
+
+general guidelines :: 
+1. make sure to use the hierachy for the maintainance 
+2. use naming conversions accordingly in creating the folders
+3. always be carefull about possible errors and fix them such as folder not exists or file not exsits and so on so
+
+make sure to use all the optimal training methods that are present in the internet and opensource models such as LLAMA, QWEN, TinyLLAMA, GPT-OSS
+
+generete me 3 python files

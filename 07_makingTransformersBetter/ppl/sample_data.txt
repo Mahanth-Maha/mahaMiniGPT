@@ -1,0 +1,7 @@
+This is the first paragraph of our training data. It contains multiple sentences to help train the language model. The model will learn from this text and generate similar content.
+
+This is the second paragraph. It provides additional training material for the transformer model. Machine learning requires diverse datasets to perform well.
+
+Here is a third paragraph with different content. Artificial intelligence is transforming many industries. Natural language processing is a key component of modern AI systems.
+
+The fourth paragraph continues with more training data. Deep learning models need substantial amounts of text to learn language patterns effectively.

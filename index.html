@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Step-by-Step Towards Building a mini-GPT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: rgb(228, 231, 192);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        .container2 {
+            max-width: 1200px;
+            margin: 30px auto 0 auto;
+            padding: 0 20px;
+        }
+        .container3 {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            color: #010b1e;
+        }
+        .my-link {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .my-link:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+        header {
+            background: #9fecff;
+            padding: 60px 0;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 2em;
+            color: #1b0000;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: #010b1e;
+            margin-bottom: 30px;
+        }
+
+        .author {
+            font-size: 1.1em;
+            color: #1a4b8a;
+            margin-bottom: 10px;
+        }
+
+        .affiliation {
+            color: #1e5194;
+            font-size: 0.95em;
+        }
+
+        .buttons {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #d45d0e;
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(212, 93, 14, 0.4);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 93, 14, 0.6);
+        }
+
+        .btn-secondary {
+            background: #28407a;
+            box-shadow: 0 4px 15px rgba(40, 64, 122, 0.4);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 6px 20px rgba(40, 64, 122, 0.6);
+        }
+        .btn-outline {
+            background: #15161a;
+            box-shadow: 0 4px 15px rgba(11, 18, 34, 0.4);
+        }
+
+        .btn-outline:hover {
+            box-shadow: 0 6px 20px rgba(11, 18, 34, 0.6);
+        }
+        main {
+            background: white;
+            margin: 40px auto;
+            border-radius: 20px;
+            box-shadow: 0 5px 5px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        section {
+            padding: 40px 40px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        section:last-child {
+            border-bottom: none;
+        }
+
+        h2 {
+            font-size: 2em;
+            color: #2d3748;
+            margin-bottom: 30px;
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(135deg, #252d51 0%, #282e75 100%);
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-size: 1.4em;
+            color: #4a5568;
+            margin: 30px 0 15px 0;
+        }
+
+        .abstract {
+            background: linear-gradient(135deg, #f6f8fb 0%, #e9ecef 100%);
+            padding: 30px;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+            font-size: 1.05em;
+            line-height: 1.8;
+        }
+
+        .highlights {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .highlight-card {
+            background: linear-gradient(135deg, #f6f8fb 0%, #ffffff 100%);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .insight-card {
+            background: #fffbe6;
+            border-left: 5px solid #f6e05e;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+        }
+
+
+        .highlight-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .highlight-card h3 {
+            color: #667eea;
+            margin-top: 0;
+            font-size: 1.2em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: #505159;
+            color: white;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #f7fafc;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+        
+        tbody tr.best-row {
+            background-color: #e6fffa;
+        }
+
+        tbody td strong {
+            color: #2c5282;
+        }
+        
+        .failure-row {
+            background-color: #fed7d7;
+        }
+
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #010b1e;
+            font-size: 0.95em;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            background: #48bb78;
+            color: white;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .badge.critical {
+            background: #f56565;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Step-by-Step Towards Building a mini-GPT</h1>
+            <p class="subtitle">From "<strong>What if</strong> GPT-2 was built on current SOTA architectural design choices?" to "<strong>Building my own LLM</strong>"</p>
+            <p class="author"><strong>Mahanth Yalla</strong></p>
+            <p class="affiliation">M.Tech Artificial Intelligence</p>
+            <p class="affiliation">Indian Institute of Science, Bengaluru</p>
+            <div class="buttons">
+                <a href="https://github.com/Mahanth-Maha/mahaMiniGPT" class="btn" target="_blank">
+                    <i class="fab fa-github" style="color: #ffffff; font-size: 18px; margin-right: 8px;"></i> View on GitHub
+                </a>
+                <a href="https://github.com/Mahanth-Maha/mahaMiniGPT/blob/main/Research/DesignDoc.pdf" class="btn btn-secondary" target="_blank">Read Design Doc 📄</a>
+                <a href="https://github.com/Mahanth-Maha/myT-LLM" class="btn btn-outline" target="_blank">View 🐦‍🔥 myT-LLM Project →</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container2">
+        <section id="abstract">
+            <h2>Abstract</h2>
+            <div class="abstract">
+                This project demystifies the Transformer architecture by building it incrementally from the ground up. Starting with a simple Bigram model, each stage adds a new component—attention, feed-forward networks, normalization—to empirically measure its impact. The goal is to move the Transformer from a "black-box" to a transparent, understandable system by answering key questions: <em>Why</em> is self-attention needed? <em>Why</em> are residuals and LayerNorm critical? <em>How much</em> do modern optimizations like SwiGLU and Flash Attention truly matter? This repository serves as a living research notebook, providing data-driven answers at each step of the journey.
+            </div>
+        </section>
+
+        <section id="experiments">
+            <h2>Experimental Log & Key Insights</h2>
+
+            <h3>Stage 1 & 2: From Bigrams to Self-Attention</h3>
+            <p>The initial stages established a baseline with a simple Bigram model and demonstrated the superiority of a learned, dynamic context. Even a single-head attention mechanism measurably outperformed a fixed-context model and a naive "bag-of-words" averaging approach.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Experiment</th>
+                        <th>Design Choice</th>
+                        <th>Test Loss</th>
+                        <th>Test Accuracy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Bigram</td>
+                        <td>Baseline (Context=1)</td>
+                        <td>2.4640</td>
+                        <td>0.2850</td>
+                    </tr>
+                    <tr>
+                        <td>Averaged Context</td>
+                        <td>Bag-of-Words Context</td>
+                        <td>2.4619</td>
+                        <td>0.2853</td>
+                    </tr>
+                    <tr class="best-row">
+                        <td><strong>Single-Head Attention</strong></td>
+                        <td><strong>Learned, Dynamic Context</strong></td>
+                        <td><strong>2.4578</strong></td>
+                        <td><strong>0.2859</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="insight-card">
+                <p><strong>Insight:</strong> A learned, dynamic context via self-attention is empirically superior to fixed or naive global context methods, even at a very small scale.</p>
+            </div>
+            
+            <h3>Stage 3 & 4: Building and Stacking Blocks <span class="badge critical">Critical Failure</span></h3>
+            <p>A complete Transformer block (MHA + FFN) was built. However, simply stacking these blocks (4 layers deep) resulted in a critical failure: the model's performance did not improve, showing no signs of learning due to the vanishing gradient problem.</p>
+             <table>
+                <thead>
+                    <tr>
+                        <th>Experiment</th>
+                        <th>Design Choice</th>
+                        <th>Test Loss</th>
+                        <th>Test Accuracy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1-Layer Transformer Block</td>
+                        <td>MHA + FFN (ReLU)</td>
+                        <td>2.4618</td>
+                        <td>0.2853</td>
+                    </tr>
+                    <tr class="failure-row">
+                        <td><strong>4-Layer Stacked Blocks</strong></td>
+                        <td><strong>Deep network without stabilization</strong></td>
+                        <td><strong>2.4622</strong></td>
+                        <td><strong>0.2852</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="insight-card">
+                <p><strong>Insight:</strong> Simply stacking Transformer blocks does not work. This failure perfectly motivates the need for stabilization techniques like residual connections and layer normalization, which are not just minor improvements but essential enablers for deep models.</p>
+            </div>
+
+            <h3>Stage 5 & 7: Stabilization and The Great Pivot</h3>
+            <p>After adding residual connections and LayerNorm to create a stable, scalable architecture, the project underwent a fundamental pivot. The character-level model was replaced with a modern Byte-Pair Encoding (BPE) tokenizer, resulting in the single most significant performance leap.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Experiment</th>
+                        <th>Design Choice</th>
+                        <th>Test Loss</th>
+                        <th>Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Baseline Transformer</td>
+                        <td>Character-level Tokenizer</td>
+                        <td>11.7760</td>
+                        <td>High loss due to char-level prediction</td>
+                    </tr>
+                    <tr class="best-row">
+                        <td><strong>Tokenizer Upgrade</strong></td>
+                        <td><strong>BPE Tokenizer (cl100k_base)</strong></td>
+                        <td><strong>7.9622</strong></td>
+                        <td><strong>Massive loss reduction from tokenizer alone</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="insight-card">
+                <p><strong>Insight:</strong> A good tokenizer is more important than many small architectural tweaks. Switching from character-level to BPE tokens dramatically simplified the learning task and provided a massive quadratic speed-up for the attention mechanism.</p>
+            </div>
+
+            <h3>Stage 8: Modern Architectural Optimizations</h3>
+            <p>With a solid foundation, this stage tested modern architectural upgrades from models like LLaMA. The goal was to find the optimal micro-architecture by comparing different normalizations, activations, and attention implementations.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Component Tested</th>
+                        <th>Winning Design</th>
+                        <th>Test Loss</th>
+                        <th>Key Benefit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Normalization</td>
+                        <td><strong>RMSNorm</strong></td>
+                        <td>7.9585</td>
+                        <td>Faster and slightly better than LayerNorm.</td>
+                    </tr>
+                    <tr class="best-row">
+                        <td>Activation Function</td>
+                        <td><strong>SwiGLU</strong></td>
+                        <td><strong>7.9543</strong></td>
+                        <td><strong>Clear winner, best performance.</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Attention Implementation</td>
+                        <td><strong>Flash Attention</strong></td>
+                        <td>7.9606</td>
+                        <td>Identical performance, huge speed/memory gain.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="insight-card">
+                <p><strong>Insight:</strong> Modern components provide clear, measurable benefits. `SwiGLU` is a superior activation, and optimizations like `RMSNorm` and `Flash Attention` offer "free" gains in speed and efficiency with no loss in quality.</p>
+            </div>
+
+            <h3>Stage 9: Final Pre-training and "mytNano"</h3>
+            <p>The final stage combined all winning components into a single model ("mytNano") and focused on stable pre-training dynamics. Implementing proper weight initialization and a cosine decay learning rate schedule unlocked the final layer of performance.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Design Choice</th>
+                        <th>Final Test Loss</th>
+                        <th>Final Test BPC</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="best-row">
+                        <td><strong>mytNano (Final Model)</strong></td>
+                        <td><strong>All optimizations + Training stability</strong></td>
+                        <td><strong>7.4214</strong></td>
+                        <td><strong>10.7068</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="insight-card">
+                <p><strong>Insight:</strong> Architectural excellence must be paired with stable training dynamics. Proper initialization and learning rate schedules are responsible for a significant drop in final loss, demonstrating their importance in achieving SOTA results.</p>
+            </div>
+
+        </section>
+
+        <section id="conclusion">
+            <h2>Conclusion</h2>
+            <div style="padding: 25px; background: linear-gradient(135deg, #f6f8fb 0%, #e9ecef 100%); border-radius: 15px; border-left: 5px solid #28407a; margin-top: 30px;">
+                <p style="line-height: 1.8; margin-bottom: 15px;">
+                    This project successfully built a Transformer from the ground up, empirically validating the function and impact of each architectural component. The journey revealed several key truths: a powerful <strong>tokenizer</strong> provides the single largest performance gain, stabilization techniques like <strong>residuals and normalization</strong> are non-negotiable enablers of depth, and modern optimizations like <strong>SwiGLU, RMSNorm, and Flash Attention</strong> offer significant, "free" improvements in performance and efficiency.
+                </p>
+                <p style="line-height: 1.8;">
+                    The final model, "mytNano," achieved a final test loss of <strong>7.4214</strong>, a culmination of meticulous, step-by-step additions and tuning. This demonstrates that a deep understanding of each component is crucial for building efficient and powerful language models. The work has been extended by scaling up this architecture to pre-train a 1 billion parameter model in the <a href="https://github.com/Mahanth-Maha/myT-LLM" class="my-link" target="_blank">myT-LLM project</a>.
+                </p>
+            </div>
+        </section>
+        <section id="more-projects" style="text-align: center; margin: 20px 0;">
+            <a href="https://mahanthyalla.in/projects" class="btn btn-outline">See All Projects of Mine →</a>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container3">
+            <p>© 2025 Mahanth Yalla | <a class="my-link" href="https://mahanthyalla.in">mahanthyalla.in</a></p>
+            <p style="margin-top: 10px;">M.Tech Artificial Intelligence | Indian Institute of Science, Bengaluru</p>
+        </div>
+    </footer>
+</body>
+</html>
